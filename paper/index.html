@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FlyRank Content Review Prioritization</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+    <div class="container">
+        <p class="eyebrow">FlyRank ML Internship Capstone</p>
+
+        <h1>Content Review Prioritization Using Machine Learning</h1>
+
+        <p class="subtitle">
+            A leakage-aware ML workflow for identifying content items
+            associated with observed impression decline.
+        </p>
+    </div>
+</header>
+
+
+<main class="container">
+
+    <!-- ABSTRACT -->
+    <section>
+        <h2>Abstract</h2>
+
+        <p>
+            This project investigates whether a machine-learning scoring
+            approach can help prioritize pages for content review. The
+            analysis uses anonymized search and content-performance data
+            to identify pages that may deserve attention.
+        </p>
+
+        <p>
+            A transparent baseline is compared with a learned model using
+            a held-out evaluation design. The findings are observed and
+            directional decision-support evidence, not causal proof or a
+            prediction of Google's ranking algorithm.
+        </p>
+    </section>
+
+
+    <!-- INTRODUCTION -->
+    <section>
+        <h2>Introduction / Problem Statement</h2>
+
+        <p>
+            Content teams may have many pages to review, making it
+            difficult to decide which pages deserve attention first.
+            This project uses observed search-performance signals to
+            identify content items associated with impression decline
+            and provide a repeatable prioritization approach.
+        </p>
+
+        <p>
+            The decision supported by this analysis is which content
+            items should receive earlier manual review.
+        </p>
+
+        <p>
+            The output is decision-support only. It does not establish
+            that a feature causes search performance changes and does
+            not predict Google's ranking algorithm.
+        </p>
+    </section>
+
+
+    <!-- 1 QUESTION -->
+    <section>
+        <h2>1. Question</h2>
+
+        <p>
+            This paper asks whether a leakage-safe ML model can rank
+            content pages by their observed likelihood of needing
+            attention better than a simple hand-written baseline rule.
+        </p>
+
+        <p>
+            The decision supported is which pages a content team should
+            review first. The goal is decision-support and prioritization,
+            not causal proof or prediction of Google's ranking algorithm.
+        </p>
+    </section>
+
+
+    <!-- 2 DATA -->
+    <section>
+        <h2>2. Data</h2>
+
+        <p>
+            I use the provided FlyRank full-release warehouse through
+            DuckDB and Hugging Face. The analysis uses anonymized client,
+            content, daily performance, and 90-day query-level data.
+        </p>
+
+        <p>
+            The feature-building workflow uses a 90-day historical window.
+            Content items are retained when they have at least 100
+            impressions in the previous 30-day period, providing a
+            minimum history threshold for the analysis.
+        </p>
+
+        <p>
+            The model uses pre-outcome search-performance and query-level
+            signals, including previous-30-day impressions, visible query
+            count, rare-query share, anonymous-query share, and top-query
+            share.
+        </p>
+
+        <p>
+            Client names, domains, URLs, private queries, credentials,
+            and raw exports are not used in the public report.
+        </p>
+
+        <p>
+            Future outcome information is not used as a model feature in
+            order to reduce leakage.
+        </p>
+    </section>
+
+
+    <!-- 3 METHODOLOGY -->
+    <section>
+        <h2>3. Methodology</h2>
+
+        <p>
+            The analysis defines a declining content item as one whose
+            impressions in the last 30 days are less than 80% of its
+            impressions in the previous 30 days.
+        </p>
+
+        <h3>Model Features</h3>
+
+        <ul>
+            <li>Previous-30-day impressions</li>
+            <li>Visible query count</li>
+            <li>Rare-query share</li>
+            <li>Anonymous-query share</li>
+            <li>Top-query share</li>
+        </ul>
+
+        <p>
+            A Random Forest classifier with 200 trees is used as the
+            first learned model. The transparent baseline always predicts
+            the majority class in the held-out test set.
+        </p>
+
+        <p>
+            Two validation designs are compared. First, a random 75/25
+            train-test split is used as a simple benchmark. Second,
+            GroupShuffleSplit is used with client_hash_id as the grouping
+            variable so that clients represented in the training data
+            are separated from clients in the test data.
+        </p>
+
+        <p>
+            The grouped split is used to examine whether the observed
+            signal survives a stricter cross-client evaluation.
+            Label-derived and future-window information are excluded
+            from the feature set to reduce leakage.
+        </p>
+    </section>
+
+
+    <!-- RESULTS -->
+    <section>
+        <h2>4. Results (vs baseline)</h2>
+
+        <p>
+            The 90-day feature workflow produced
+            <strong>107,144 content items</strong> with enough history
+            for analysis.
+        </p>
+
+        <div class="results-grid">
+
+            <div class="result-card">
+                <h3>Random Split</h3>
+
+                <p>
+                    <strong>Model accuracy:</strong> 0.518
+                </p>
+
+                <p>
+                    <strong>Model F1:</strong> 0.587
+                </p>
+
+                <p>
+                    <strong>Baseline accuracy:</strong> 0.540
+                </p>
+
+                <p>
+                    <strong>Baseline F1:</strong> 0.701
+                </p>
+            </div>
+
+
+            <div class="result-card">
+                <h3>Client-Grouped Split</h3>
+
+                <p>
+                    <strong>Model accuracy:</strong> 0.468
+                </p>
+
+                <p>
+                    <strong>Model macro F1:</strong> 0.464
+                </p>
+
+                <p>
+                    <strong>Model weighted F1:</strong> 0.454
+                </p>
+
+                <p>
+                    <strong>Baseline accuracy:</strong> 0.392
+                </p>
+            </div>
+
+        </div>
+
+        <p>
+            On the random 75/25 split, the Random Forest achieved
+            0.518 accuracy and 0.587 F1-score. The majority-class
+            baseline achieved 0.540 accuracy and 0.701 F1-score.
+            Therefore, the model did not outperform the baseline
+            on this split.
+        </p>
+
+        <p>
+            Using a client-grouped holdout, the test set contained
+            5,140 rows from 12 clients. The model achieved 0.468
+            accuracy, 0.464 macro F1, and 0.454 weighted F1.
+            The baseline accuracy was 0.392.
+        </p>
+
+        <p>
+            These results are observational and directional. In this
+            run, the learned model did not clearly outperform the
+            simple baseline, so the model should not be presented as
+            a superior predictor.
+        </p>
+
+        <p>
+            The workflow is still useful as a reproducible
+            decision-support experiment.
+        </p>
+    </section>
+
+
+    <!-- LIMITATIONS -->
+    <section>
+        <h2>5. Limitations</h2>
+
+        <p>
+            This analysis cannot prove that any feature causes a change
+            in search performance.
+        </p>
+
+        <p>
+            It cannot explain or predict Google's ranking algorithm,
+            and it cannot guarantee that a recommended page will
+            improve after editing.
+        </p>
+
+        <p>
+            The results are limited to the observed anonymized dataset,
+            its time windows, its label definition, and the validation
+            design.
+        </p>
+
+        <p>
+            The ranked queue should therefore be treated as directional
+            decision-support for review prioritization.
+        </p>
+    </section>
+
+
+    <!-- RECOMMENDATIONS -->
+    <section>
+        <h2>6. Ranked Recommendations</h2>
+
+        <p>
+            The model is intended to support content-review
+            prioritization rather than make automatic publishing
+            decisions.
+        </p>
+
+        <p>
+            A practical workflow is to review higher-risk content first
+            and combine the model's result with editorial judgment.
+        </p>
+
+        <p>
+            A high model score indicates that an item resembles content
+            associated with the observed decline label in this dataset;
+            it does not guarantee that a refresh will improve performance.
+        </p>
+
+        <p>
+            Reviewers should check the underlying content and
+            search-performance context before taking action.
+        </p>
+
+        <p>
+            Items should not be automatically rewritten, removed, or
+            published based only on the model result.
+        </p>
+    </section>
+
+
+    <!-- ARTIFACTS -->
+    <section>
+        <h2>7. Artifacts the Paper Embeds</h2>
+
+        <p>
+            The main analysis artifact is the capstone notebook containing
+            the feature construction, model training, random holdout
+            evaluation, and client-grouped evaluation.
+        </p>
+
+        <p>
+            The notebook records the assumptions, feature definitions,
+            label definition, validation design, and measured results
+            so that the analysis can be inspected and reproduced from
+            the repository.
+        </p>
+    </section>
+
+
+    <!-- REPRODUCIBILITY -->
+    <section>
+        <h2>Reproducibility</h2>
+
+        <p>
+            The analysis is contained in this capstone notebook and the
+            supporting assignment notebooks in the repository.
+        </p>
+
+        <p>
+            The workflow documents the data preparation, feature
+            construction, model training, validation design, and
+            measured results.
+        </p>
+
+        <p>
+            The analysis is designed to be reproducible from the provided
+            anonymized dataset without exposing client names, domains,
+            private queries, credentials, or raw exports.
+        </p>
+    </section>
+
+
+    <!-- ACKNOWLEDGMENTS -->
+    <section>
+        <h2>8. Acknowledgments &amp; Data Credit</h2>
+
+        <p>
+            This project was completed as part of the FlyRank ML
+            internship workflow.
+        </p>
+
+        <p>
+            The analysis uses the provided anonymized, public-safe
+            dataset and follows the project guidance for responsible
+            use of the data.
+        </p>
+
+        <p>
+            Data and project context are credited to FlyRank.
+        </p>
+
+        <p>
+            <a href="https://flyrank.ai" target="_blank">
+                FlyRank
+            </a>
+        </p>
+    </section>
+
+
+    <!-- DEMO -->
+    <section>
+        <h2>5-Minute Demo Outline</h2>
+
+        <ol>
+            <li>
+                <strong>0:00–0:30 — Problem:</strong>
+                Explain the goal of identifying content items associated
+                with observed impression decline.
+            </li>
+
+            <li>
+                <strong>0:30–1:30 — Data:</strong>
+                Explain the anonymized FlyRank data, the 90-day historical
+                window, and the minimum previous-30-day impression threshold.
+            </li>
+
+            <li>
+                <strong>1:30–2:30 — Method:</strong>
+                Explain the decline label, five model features, Random
+                Forest model, majority-class baseline, and leakage controls.
+            </li>
+
+            <li>
+                <strong>2:30–3:30 — Results:</strong>
+                Show the random-split results and then the stricter
+                client-grouped results.
+            </li>
+
+            <li>
+                <strong>3:30–4:30 — Generalization:</strong>
+                Explain why the grouped client split is useful for checking
+                whether the signal survives across clients.
+            </li>
+
+            <li>
+                <strong>4:30–5:00 — Limitations:</strong>
+                Explain that the results are directional decision-support
+                evidence, not causal proof or a prediction of Google's
+                ranking algorithm.
+            </li>
+        </ol>
+    </section>
+
+
+    <!-- SOCIAL -->
+    <section>
+        <h2>Social-Post Cut</h2>
+
+        <p>
+            Built a leakage-aware ML workflow to identify content items
+            associated with observed impression decline using anonymized
+            search-performance data. I compared a Random Forest model
+            with a transparent majority-class baseline and then tested
+            the model with a client-grouped holdout to examine
+            cross-client generalization.
+        </p>
+
+        <p>
+            The results are intended as practical decision-support
+            evidence, not causal proof or a prediction of Google's
+            ranking algorithm.
+        </p>
+    </section>
+
+
+    <!-- EMPLOYER -->
+    <section>
+        <h2>Employer-Facing Summary</h2>
+
+        <p>
+            I built a leakage-aware ML workflow using anonymized
+            search-performance data to identify content items associated
+            with observed impression decline.
+        </p>
+
+        <p>
+            I evaluated a Random Forest model against a transparent
+            majority-class baseline and then used a client-grouped
+            holdout to examine whether the signal generalized across
+            clients.
+        </p>
+
+        <p>
+            The project demonstrates an end-to-end approach to feature
+            engineering, leakage-aware validation, and honest
+            communication of model limitations.
+        </p>
+    </section>
+
+</main>
+
+
+<footer>
+    <div class="container">
+        <p>
+            FlyRank ML Internship Capstone
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>
